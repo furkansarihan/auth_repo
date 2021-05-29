@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:developer';
 
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
-import 'package:meta/meta.dart';
 
 import 'models/models.dart';
 
@@ -27,13 +26,13 @@ class LogOutFailure implements Exception {}
 class AuthRepo {
   /// {@macro authentication_repository}
   AuthRepo({
-    firebase_auth.FirebaseAuth firebaseAuth,
+    firebase_auth.FirebaseAuth? firebaseAuth,
   }) : _firebaseAuth = firebaseAuth ?? firebase_auth.FirebaseAuth.instance;
 
-  final firebase_auth.FirebaseAuth _firebaseAuth;
+  late final firebase_auth.FirebaseAuth _firebaseAuth;
 
-  bool get guest => _firebaseAuth.currentUser?.isAnonymous ?? true;
-  String get uid => _firebaseAuth.currentUser?.uid;
+  bool? get guest => _firebaseAuth.currentUser?.isAnonymous;
+  String? get uid => _firebaseAuth.currentUser?.uid;
 
   /// Stream of [User] which will emit the current user when
   /// the authentication state changes.
@@ -49,10 +48,9 @@ class AuthRepo {
   ///
   /// Throws a [SignUpFailure] if an exception occurs.
   Future<void> signUp({
-    @required String email,
-    @required String password,
+    required String email,
+    required String password,
   }) async {
-    assert(email != null && password != null);
     try {
       await _firebaseAuth.createUserWithEmailAndPassword(
         email: email,
@@ -78,10 +76,9 @@ class AuthRepo {
   ///
   /// Throws a [LogInWithEmailAndPasswordFailure] if an exception occurs.
   Future<void> logInWithEmailAndPassword({
-    @required String email,
-    @required String password,
+    required String email,
+    required String password,
   }) async {
-    assert(email != null && password != null);
     try {
       await _firebaseAuth.signInWithEmailAndPassword(
         email: email,
@@ -96,11 +93,11 @@ class AuthRepo {
   ///
   /// Throws a [VerifyWithPhoneFailure] if an exception occurs.
   Future<void> verifyPhoneNumber({
-    @required String phoneNumber,
-    Function(String verificationID) codeSentCallback,
-    Function codeSuccessCallback,
-    Function codeFailedCallback,
-    Function codeTimeoutCallback,
+    required String phoneNumber,
+    Function(String verificationID)? codeSentCallback,
+    Function? codeSuccessCallback,
+    Function? codeFailedCallback,
+    Function? codeTimeoutCallback,
   }) async {
     final firebase_auth.PhoneVerificationCompleted verificationCompleted = (
       firebase_auth.AuthCredential credential,
@@ -119,7 +116,7 @@ class AuthRepo {
 
     final firebase_auth.PhoneCodeSent codeSent = (
       String _verificationID, [
-      int forceResendingToken,
+      int? forceResendingToken,
     ]) {
       codeSentCallback?.call(_verificationID);
     };
@@ -146,8 +143,8 @@ class AuthRepo {
   ///
   /// Throws a [LogInWithEmailAndPasswordFailure] if an exception occurs.
   Future<void> signInWithSmsCode({
-    @required String verificationID,
-    @required String smsCode,
+    required String verificationID,
+    required String smsCode,
   }) async {
     assert(verificationID != null && smsCode != null);
     firebase_auth.AuthCredential credential =
