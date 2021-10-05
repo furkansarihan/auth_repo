@@ -94,10 +94,12 @@ class AuthRepo {
   /// Throws a [VerifyWithPhoneFailure] if an exception occurs.
   Future<void> verifyPhoneNumber({
     required String phoneNumber,
-    Function(String verificationID)? codeSentCallback,
+    int? forceResendingToken,
+    Function(String verificationID, int? forceResendingToken)? codeSentCallback,
+    Function(String verificationID)? codeTimeoutCallback,
     Function? codeSuccessCallback,
-    Function? codeFailedCallback,
-    Function? codeTimeoutCallback,
+    Function? codeVerificationFailedCallback,
+    Duration? timeout,
   }) async {
     final firebase_auth.PhoneVerificationCompleted verificationCompleted = (
       firebase_auth.AuthCredential credential,
@@ -111,24 +113,25 @@ class AuthRepo {
       firebase_auth.FirebaseAuthException authException,
     ) {
       log("Code: ${authException.code}. Message: ${authException.message}");
-      codeFailedCallback?.call();
+      codeVerificationFailedCallback?.call();
     };
 
     final firebase_auth.PhoneCodeSent codeSent = (
       String _verificationID, [
       int? forceResendingToken,
     ]) {
-      codeSentCallback?.call(_verificationID);
+      codeSentCallback?.call(_verificationID, forceResendingToken);
     };
 
     final firebase_auth.PhoneCodeAutoRetrievalTimeout codeAutoRetrievalTimeout =
         (String _verificationID) {
-      codeFailedCallback?.call();
+      codeTimeoutCallback?.call(_verificationID);
     };
     try {
       await _firebaseAuth.verifyPhoneNumber(
         phoneNumber: phoneNumber,
-        timeout: const Duration(minutes: 2),
+        forceResendingToken: forceResendingToken,
+        timeout: timeout ?? const Duration(seconds: 30),
         codeSent: codeSent,
         verificationCompleted: verificationCompleted,
         verificationFailed: verificationFailed,
@@ -146,7 +149,6 @@ class AuthRepo {
     required String verificationID,
     required String smsCode,
   }) async {
-    assert(verificationID != null && smsCode != null);
     firebase_auth.AuthCredential credential =
         firebase_auth.PhoneAuthProvider.credential(
       verificationId: verificationID,
