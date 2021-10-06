@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:developer';
 
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:google_sign_in/google_sign_in.dart';
 
 import 'models/models.dart';
 
@@ -27,9 +28,12 @@ class AuthRepo {
   /// {@macro authentication_repository}
   AuthRepo({
     firebase_auth.FirebaseAuth? firebaseAuth,
-  }) : _firebaseAuth = firebaseAuth ?? firebase_auth.FirebaseAuth.instance;
+    GoogleSignIn? googleSignIn,
+  })  : _firebaseAuth = firebaseAuth ?? firebase_auth.FirebaseAuth.instance,
+        _googleSignIn = googleSignIn ?? GoogleSignIn.standard();
 
   late final firebase_auth.FirebaseAuth _firebaseAuth;
+  late final GoogleSignIn _googleSignIn;
 
   bool? get guest => _firebaseAuth.currentUser?.isAnonymous;
   String? get uid => _firebaseAuth.currentUser?.uid;
@@ -161,6 +165,38 @@ class AuthRepo {
     }
   }
 
+  Future<void> signInWithGoogle() async {
+    // Trigger the authentication flow
+    final GoogleSignInAccount? googleUser;
+
+    try {
+      googleUser = await _googleSignIn.signIn();
+    } catch (e) {
+      throw LogInWithGoogleFailure();
+    }
+
+    if (googleUser == null) {
+      throw LogInWithGoogleFailure();
+    }
+
+    // Obtain the auth details from the request
+    final GoogleSignInAuthentication googleAuth =
+        await googleUser.authentication;
+
+    // Create a new credential
+    final credential = firebase_auth.GoogleAuthProvider.credential(
+      accessToken: googleAuth.accessToken,
+      idToken: googleAuth.idToken,
+    );
+
+    // Once signed in, return the UserCredential
+    try {
+      await _firebaseAuth.signInWithCredential(credential);
+    } on Exception {
+      throw LogInWithGoogleFailure();
+    }
+  }
+
   /// Signs out the current user which will emit
   /// [User.empty] from the [user] Stream.
   ///
@@ -169,6 +205,7 @@ class AuthRepo {
     try {
       await Future.wait([
         _firebaseAuth.signOut(),
+        _googleSignIn.signOut(),
       ]);
     } on Exception {
       throw LogOutFailure();
