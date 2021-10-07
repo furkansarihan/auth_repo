@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 /// {@template user}
 /// User model
@@ -8,32 +9,68 @@ import 'package:equatable/equatable.dart';
 class User extends Equatable {
   /// {@macro user}
   const User({
-    required this.id,
+    required this.uid,
+    this.displayName,
     this.email,
-    this.name,
-    this.photo,
+    this.emailVerified,
+    this.isAnonymous,
+    this.metadata,
+    this.phoneNumber,
+    this.photoURL,
+    this.providerData,
+    this.refreshToken,
+    this.tenantId,
   });
 
-  /// The current user's id.
-  final String id;
+  final String uid;
 
-  /// The current user's email address.
+  final String? displayName;
+
   final String? email;
 
-  /// The current user's name (display name).
-  final String? name;
+  final bool? emailVerified;
 
-  /// Url for the current user's photo.
-  final String? photo;
+  final bool? isAnonymous;
+
+  final UserMetadata? metadata;
+
+  final String? phoneNumber;
+
+  final String? photoURL;
+
+  final List<UserInfo>? providerData;
+
+  final String? refreshToken;
+
+  final String? tenantId;
 
   /// Empty user which represents an unauthenticated user.
-  static const empty = User(id: '', email: null, name: null, photo: null);
+  static const empty = User(
+    uid: '',
+    displayName: null,
+    email: null,
+    emailVerified: null,
+    isAnonymous: null,
+    metadata: null,
+    phoneNumber: null,
+    photoURL: null,
+    providerData: null,
+    refreshToken: null,
+    tenantId: null,
+  );
 
   @override
   List<Object> get props => [
-        id,
+        uid,
+        if (displayName != null) displayName!,
         if (email != null) email!,
-        if (name != null) name!,
-        if (photo != null) photo!,
+        if (emailVerified != null) emailVerified!,
+        if (isAnonymous != null) isAnonymous!,
+        if (metadata != null) metadata!,
+        if (phoneNumber != null) phoneNumber!,
+        if (photoURL != null) photoURL!,
+        if (providerData != null) providerData!,
+        if (refreshToken != null) refreshToken!,
+        if (tenantId != null) tenantId!,
       ];
 }
