@@ -274,6 +274,9 @@ class AuthRepo {
     try {
       await _firebaseAuth.signInWithCredential(oauthCredential);
     } catch (e) {
+      if (e is firebase_auth.FirebaseAuthException) {
+        if (e.code == 'unknown') return;
+      }
       throw LogInWithAppleFailure();
     }
   }
