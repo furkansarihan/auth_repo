@@ -1,8 +1,14 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:developer';
+import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:firebase_auth_oauth/firebase_auth_oauth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import 'models/models.dart';
 
@@ -17,6 +23,9 @@ class VerifyWithPhoneFailure implements Exception {}
 
 /// Thrown during the sign in with google process if a failure occurs.
 class LogInWithGoogleFailure implements Exception {}
+
+/// Thrown during the sign in with apple process if a failure occurs.
+class LogInWithAppleFailure implements Exception {}
 
 /// Thrown during the logout process if a failure occurs.
 class LogOutFailure implements Exception {}
@@ -194,6 +203,78 @@ class AuthRepo {
       await _firebaseAuth.signInWithCredential(credential);
     } on Exception {
       throw LogInWithGoogleFailure();
+    }
+  }
+
+  /// Returns the sha256 hash of [input] in hex notation.
+  String _sha256ofString(String input) {
+    final bytes = utf8.encode(input);
+    final digest = sha256.convert(bytes);
+    return digest.toString();
+  }
+
+  Future<void> signInWithApple() async {
+    if (kIsWeb || Platform.isAndroid) {
+      return _signInWithAppleOnAndroid();
+    }
+    // To prevent replay attacks with the credential returned from Apple, we
+    // include a nonce in the credential request. When signing in with
+    // Firebase, the nonce in the id token returned by Apple, is expected to
+    // match the sha256 hash of `rawNonce`.
+    final rawNonce = generateNonce();
+    final nonce = _sha256ofString(rawNonce);
+
+    // Request credential for the currently signed in Apple account.
+    AuthorizationCredentialAppleID appleCredential;
+    try {
+      appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [AppleIDAuthorizationScopes.email],
+        nonce: nonce,
+      );
+    } catch (e) {
+      throw LogInWithAppleFailure();
+    }
+
+    // Create an `OAuthCredential` from the credential returned by Apple.
+    final oauthCredential = firebase_auth.OAuthProvider("apple.com").credential(
+      idToken: appleCredential.identityToken,
+      rawNonce: rawNonce,
+    );
+
+    // Sign in the user with Firebase. If the nonce we generated earlier does
+    // not match the nonce in `appleCredential.identityToken`, sign in will fail.
+    try {
+      await _firebaseAuth.signInWithCredential(oauthCredential);
+    } catch (e) {
+      throw LogInWithAppleFailure();
+    }
+  }
+
+  Future<void> _signInWithAppleOnAndroid() async {
+    final rawNonce = generateNonce();
+
+    firebase_auth.OAuthCredential appleCredential;
+    try {
+      appleCredential = await FirebaseAuthOAuth().signInOAuth(
+        "apple.com",
+        ["email"],
+      );
+    } catch (e) {
+      throw LogInWithAppleFailure();
+    }
+
+    // Create an `OAuthCredential` from the credential returned by Apple.
+    final oauthCredential = firebase_auth.OAuthProvider("apple.com").credential(
+      idToken: appleCredential.idToken,
+      rawNonce: rawNonce,
+    );
+
+    // Sign in the user with Firebase. If the nonce we generated earlier does
+    // not match the nonce in `appleCredential.identityToken`, sign in will fail.
+    try {
+      await _firebaseAuth.signInWithCredential(oauthCredential);
+    } catch (e) {
+      throw LogInWithAppleFailure();
     }
   }
 
