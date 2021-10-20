@@ -14,10 +14,39 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'models/models.dart';
 
 /// Thrown if during the sign up process if a failure occurs.
-class SignUpFailure implements Exception {}
+class SignUpFailure implements Exception {
+  SignUpFailure({
+    this.code,
+    this.message,
+    this.email,
+  });
+  String? code;
+  String? message;
+  String? email;
+}
 
 /// Thrown during the login process if a failure occurs.
-class LogInWithEmailAndPasswordFailure implements Exception {}
+class SignInWithEmailAndPasswordFailure implements Exception {
+  SignInWithEmailAndPasswordFailure({
+    this.code,
+    this.message,
+    this.email,
+  });
+  String? code;
+  String? message;
+  String? email;
+}
+
+class PasswordResetFailure implements Exception {
+  PasswordResetFailure({
+    this.code,
+    this.message,
+    this.email,
+  });
+  String? code;
+  String? message;
+  String? email;
+}
 
 /// Thrown during the login process if a failure occurs.
 class VerifyWithPhoneFailure implements Exception {}
@@ -87,8 +116,32 @@ class AuthRepo {
         email: email,
         password: password,
       );
-    } on Exception {
+    } catch (e) {
+      if (e is firebase_auth.FirebaseAuthException) {
+        throw SignUpFailure(
+          code: e.code,
+          message: e.message,
+          email: e.email,
+        );
+      }
       throw SignUpFailure();
+    }
+  }
+
+  Future<void> sendPasswordResetEmail({
+    required String email,
+  }) async {
+    try {
+      await _firebaseAuth.sendPasswordResetEmail(email: email);
+    } catch (e) {
+      if (e is firebase_auth.FirebaseAuthException) {
+        throw PasswordResetFailure(
+          code: e.code,
+          message: e.message,
+          email: e.email,
+        );
+      }
+      throw PasswordResetFailure();
     }
   }
 
@@ -106,7 +159,7 @@ class AuthRepo {
   /// Signs in with the provided [email] and [password].
   ///
   /// Throws a [LogInWithEmailAndPasswordFailure] if an exception occurs.
-  Future<void> logInWithEmailAndPassword({
+  Future<void> signInWithEmailAndPassword({
     required String email,
     required String password,
   }) async {
@@ -115,8 +168,15 @@ class AuthRepo {
         email: email,
         password: password,
       );
-    } on Exception {
-      throw LogInWithEmailAndPasswordFailure();
+    } catch (e) {
+      if (e is firebase_auth.FirebaseAuthException) {
+        throw SignInWithEmailAndPasswordFailure(
+          code: e.code,
+          message: e.message,
+          email: e.email,
+        );
+      }
+      throw SignInWithEmailAndPasswordFailure();
     }
   }
 
