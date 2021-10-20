@@ -93,6 +93,7 @@ class AuthRepo {
 
   bool? get guest => _firebaseAuth.currentUser?.isAnonymous;
   String? get uid => _firebaseAuth.currentUser?.uid;
+  User? get currentUser => _firebaseAuth.currentUser?.toUser;
 
   /// Stream of [User] which will emit the current user when
   /// the authentication state changes.
@@ -102,6 +103,20 @@ class AuthRepo {
     return _firebaseAuth.authStateChanges().map((firebaseUser) {
       return firebaseUser == null ? User.empty : firebaseUser.toUser;
     });
+  }
+
+  /// Stream of [User] which will emit the current user when
+  /// any user updates.
+  ///
+  /// Emits [User.empty] if the user is not authenticated.
+  Stream<User> get userChanges {
+    return _firebaseAuth.userChanges().map((firebaseUser) {
+      return firebaseUser == null ? User.empty : firebaseUser.toUser;
+    });
+  }
+
+  Future<void> reloadUser() async {
+    return _firebaseAuth.currentUser?.reload();
   }
 
   /// Creates a new user with the provided [email] and [password].
@@ -143,6 +158,10 @@ class AuthRepo {
       }
       throw PasswordResetFailure();
     }
+  }
+
+  Future<void>? sendEmailVerification() async {
+    await _firebaseAuth.currentUser?.sendEmailVerification();
   }
 
   /// Creates an new anonymous user.
