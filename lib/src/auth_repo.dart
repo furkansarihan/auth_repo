@@ -74,6 +74,11 @@ class AccountExistDifferentProviderException implements Exception {
 /// Thrown during the logout process if a failure occurs.
 class LogOutFailure implements Exception {}
 
+/// Thrown during the delete process if a failure occurs.
+class DeleteUserFailure implements Exception {}
+
+class RecentLoginRequiredFailure implements Exception {}
+
 /// {@template authentication_repository}
 /// Repository which manages user authentication.
 /// {@endtemplate}
@@ -449,6 +454,19 @@ class AuthRepo {
       ]);
     } on Exception {
       throw LogOutFailure();
+    }
+  }
+
+  /// Deletes current user.
+  Future<void> deleteUser() async {
+    try {
+      await _firebaseAuth.currentUser?.delete();
+    } catch (e) {
+      if (e is firebase_auth.FirebaseAuthException &&
+          e.code == 'requires-recent-login') {
+        throw RecentLoginRequiredFailure();
+      }
+      throw DeleteUserFailure();
     }
   }
 }
