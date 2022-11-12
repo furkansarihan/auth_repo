@@ -7,7 +7,6 @@ import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:firebase_auth_oauth/firebase_auth_oauth.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
@@ -57,9 +56,6 @@ class LogInWithGoogleFailure implements Exception {}
 /// Thrown during the sign in with apple process if a failure occurs.
 class LogInWithAppleFailure implements Exception {}
 
-/// Thrown during the sign in with facebook process if a failure occurs.
-class LogInWithFacebookFailure implements Exception {}
-
 class AccountExistDifferentProviderException implements Exception {
   AccountExistDifferentProviderException({
     this.code,
@@ -87,14 +83,11 @@ class AuthRepo {
   AuthRepo({
     firebase_auth.FirebaseAuth? firebaseAuth,
     GoogleSignIn? googleSignIn,
-    FacebookAuth? facebookAuth,
   })  : _firebaseAuth = firebaseAuth ?? firebase_auth.FirebaseAuth.instance,
-        _googleSignIn = googleSignIn ?? GoogleSignIn.standard(),
-        _facebookAuth = facebookAuth ?? FacebookAuth.instance;
+        _googleSignIn = googleSignIn ?? GoogleSignIn.standard();
 
   late final firebase_auth.FirebaseAuth _firebaseAuth;
   late final GoogleSignIn _googleSignIn;
-  late final FacebookAuth _facebookAuth;
 
   bool? get guest => _firebaseAuth.currentUser?.isAnonymous;
   String? get uid => _firebaseAuth.currentUser?.uid;
@@ -403,42 +396,6 @@ class AuthRepo {
         );
       }
       throw LogInWithAppleFailure();
-    }
-  }
-
-  Future<void> signInWithFacebook() async {
-    // Trigger the sign-in flow
-    LoginResult loginResult;
-    try {
-      loginResult = await _facebookAuth.login(
-        permissions: const ['email'],
-      );
-    } catch (e) {
-      throw LogInWithFacebookFailure();
-    }
-
-    if (loginResult.accessToken == null) {
-      throw LogInWithFacebookFailure();
-    }
-
-    // Create a credential from the access token
-    final firebase_auth.OAuthCredential facebookAuthCredential =
-        firebase_auth.FacebookAuthProvider.credential(
-      loginResult.accessToken!.token,
-    );
-
-    try {
-      await _firebaseAuth.signInWithCredential(facebookAuthCredential);
-    } catch (e) {
-      if (e is firebase_auth.FirebaseAuthException &&
-          e.code == 'account-exists-with-different-credential') {
-        throw AccountExistDifferentProviderException(
-          code: e.code,
-          message: e.message,
-          email: e.email,
-        );
-      }
-      throw LogInWithFacebookFailure();
     }
   }
 
